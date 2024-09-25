@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+wget https://dwm.suckless.org/patches/alwayscenter/dwm-alwayscenter-20200625-f04cac6.diff
+wget https://raw.githubusercontent.com/bakkeby/patches/refs/heads/master/dwm/dwm-togglefullscreen-6.2.diff
+wget https://dwm.suckless.org/patches/pertag/dwm-pertag-20200914-61bb8b2.diff
+wget https://dwm.suckless.org/patches/systray/dwm-systray-20230922-9f88553.diff
+
+patch -p1 < dwm-alwayscenter-20200625-f04cac6.diff
+patch -p1 < dwm-togglefullscreen-6.2.diff
+patch -p1 < dwm-pertag-20200914-61bb8b2.diff
+patch -p1 < dwm-systray-20230922-9f88553.diff
