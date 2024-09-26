@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
 
-wget https://dwm.suckless.org/patches/notitle/dwm-notitle-6.2.diff
+wget https://dwm.suckless.org/patches/warp/dwm-warp-6.4.diff
 
-patch -p1 < dwm-notitle-6.2.diff
+patch -p1 < dwm-warp-6.4.diff
