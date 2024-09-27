@@ -105,6 +105,7 @@ enum {
   ClkTagBar,
   ClkLtSymbol,
   ClkStatusText,
+  ClkWinTitle,
   ClkClientWin,
   ClkRootWin,
   ClkLast
@@ -266,8 +267,6 @@ static void spawn(const Arg *arg);
 static Monitor *systraytomon(Monitor *m);
 static void tag(const Arg *arg);
 static void tagmon(const Arg *arg);
-static void tagtoleft(const Arg *arg);
-static void tagtoright(const Arg *arg);
 static void tile(Monitor *m);
 static void togglebar(const Arg *arg);
 static void togglefloating(const Arg *arg);
@@ -291,8 +290,6 @@ static void updatetitle(Client *c);
 static void updatewindowtype(Client *c);
 static void updatewmhints(Client *c);
 static void view(const Arg *arg);
-static void viewtoleft(const Arg *arg);
-static void viewtoright(const Arg *arg);
 static void warp(const Client *c);
 static Client *wintoclient(Window w);
 static Monitor *wintomon(Window w);
@@ -513,8 +510,10 @@ void buttonpress(XEvent *e) {
       arg.ui = 1 << i;
     } else if (ev->x < x + TEXTW(selmon->ltsymbol))
       click = ClkLtSymbol;
-    else
+    else if (ev->x > selmon->ww - TEXTW(stext))
       click = ClkStatusText;
+    else
+      click = ClkWinTitle;
   } else if ((c = wintoclient(ev->window))) {
     focus(c);
     restack(selmon);
@@ -879,8 +878,15 @@ void drawbar(Monitor *m) {
   x = drw_text(drw, x, 0, w, bh, lrpad / 2, m->ltsymbol, 0);
 
   if ((w = m->ww - tw - stw - x) > bh) {
-    drw_setscheme(drw, scheme[SchemeNorm]);
-    drw_rect(drw, x, 0, w, bh, 1, 1);
+    if (m->sel) {
+      drw_setscheme(drw, scheme[m == selmon ? SchemeSel : SchemeNorm]);
+      drw_text(drw, x, 0, w, bh, lrpad / 2, m->sel->name, 0);
+      if (m->sel->isfloating)
+        drw_rect(drw, x + boxs, boxs, boxw, boxw, m->sel->isfixed, 0);
+    } else {
+      drw_setscheme(drw, scheme[SchemeNorm]);
+      drw_rect(drw, x, 0, w, bh, 1, 1);
+    }
   }
   drw_map(drw, m->barwin, 0, 0, m->ww - stw, bh);
 }
@@ -1385,8 +1391,12 @@ void propertynotify(XEvent *e) {
       drawbars();
       break;
     }
-    if (ev->atom == XA_WM_NAME || ev->atom == netatom[NetWMName])
-      updatetitle(c);
+    if (ev->atom == XA_WM_NAME || ev->atom == netatom[NetWMName]) {
+      if (ev->atom == XA_WM_NAME || ev->atom == netatom[NetWMName])
+        updatetitle(c);
+      if (c == c->mon->sel)
+        drawbar(c->mon);
+    }
     if (ev->atom == netatom[NetWMWindowType])
       updatewindowtype(c);
   }
@@ -1848,26 +1858,6 @@ void tagmon(const Arg *arg) {
   if (!selmon->sel || !mons->next)
     return;
   sendmon(selmon->sel, dirtomon(arg->i));
-}
-
-void tagtoleft(const Arg *arg) {
-  if (selmon->sel != NULL &&
-      __builtin_popcount(selmon->tagset[selmon->seltags] & TAGMASK) == 1 &&
-      selmon->tagset[selmon->seltags] > 1) {
-    selmon->sel->tags >>= 1;
-    focus(NULL);
-    arrange(selmon);
-  }
-}
-
-void tagtoright(const Arg *arg) {
-  if (selmon->sel != NULL &&
-      __builtin_popcount(selmon->tagset[selmon->seltags] & TAGMASK) == 1 &&
-      selmon->tagset[selmon->seltags] & (TAGMASK >> 1)) {
-    selmon->sel->tags <<= 1;
-    focus(NULL);
-    arrange(selmon);
-  }
 }
 
 void tile(Monitor *m) {
@@ -2416,26 +2406,6 @@ void view(const Arg *arg) {
 
   focus(NULL);
   arrange(selmon);
-}
-
-void viewtoleft(const Arg *arg) {
-  if (__builtin_popcount(selmon->tagset[selmon->seltags] & TAGMASK) == 1 &&
-      selmon->tagset[selmon->seltags] > 1) {
-    selmon->seltags ^= 1; /* toggle sel tagset */
-    selmon->tagset[selmon->seltags] = selmon->tagset[selmon->seltags ^ 1] >> 1;
-    focus(NULL);
-    arrange(selmon);
-  }
-}
-
-void viewtoright(const Arg *arg) {
-  if (__builtin_popcount(selmon->tagset[selmon->seltags] & TAGMASK) == 1 &&
-      selmon->tagset[selmon->seltags] & (TAGMASK >> 1)) {
-    selmon->seltags ^= 1; /* toggle sel tagset */
-    selmon->tagset[selmon->seltags] = selmon->tagset[selmon->seltags ^ 1] << 1;
-    focus(NULL);
-    arrange(selmon);
-  }
 }
 
 void warp(const Client *c) {

@@ -2,6 +2,8 @@
 
 #include <X11/XF86keysym.h>
 
+#define FONT "IosevkaNerdFontMono-Regular"
+
 static const char *upvol[] = { "/home/petrside/.config/dwm_scripts/volume/vol_inc.sh", NULL};
 static const char *downvol[] = { "/home/petrside/.config/dwm_scripts/volume/vol_dec.sh", NULL};
 static const char *mutevol[] = { "/home/petrside/.config/dwm_scripts/volume/vol_toggle.sh", NULL};
@@ -14,31 +16,29 @@ static const char *medplaypausecmd[] = {"playerctl", "play-pause", NULL};
 
 static const int topbar = 1;
 static const int showbar = 1;
+static const Rule rules[] = {0};
 static const int showsystray = 1;
 static const unsigned int snap = 10;
 static const unsigned int borderpx = 3;
 static const unsigned int systrayonleft = 0;
 static const unsigned int systraypinning = 0;
 static const int systraypinningfailfirst = 1;
-static const unsigned int systrayspacing = 20;
-static const char *fonts[] = {"monospace:size=13"};
+static const unsigned int systrayspacing = 10;
+static const char *fonts[] = {FONT":size=12"};
+static const char *tags[] = {"1", "2", "3", "4", "5", "6", "7", "8", "9"};
 
-static const char col_gray1[]       = "#222222";
-static const char col_gray2[]       = "#444444";
-static const char col_gray3[]       = "#bbbbbb";
-static const char col_gray4[]       = "#eeeeee";
-static const char col_cyan[]        = "#005577";
-static const char *colors[][3]      = {
-	/*               fg         bg         border   */
-	[SchemeNorm] = { col_gray3, col_gray1, col_gray2 },
-	[SchemeSel]  = { col_gray4, col_cyan,  col_cyan  },
+static const char col_gray1[] = "#222222";
+static const char col_gray2[] = "#444444";
+static const char col_gray3[] = "#bbbbbb";
+static const char col_gray4[] = "#eeeeee";
+static const char col_cyan[] = "#005577";
+static const char *colors[][3] = {
+	[SchemeNorm] = {col_gray3, col_gray1, col_gray2},
+	[SchemeSel] = {col_gray4, col_cyan, col_cyan},
 };
 
-static const char *tags[] = {"1", "2", "3", "4", "5", "6", "7", "8", "9"};
-static const Rule rules[] = {0};
-
-static const float mfact = 0.55;
 static const int nmaster = 1;
+static const float mfact = 0.55;
 static const int resizehints = 1;
 static const int lockfullscreen = 1;
 
@@ -82,31 +82,23 @@ static const Key keys[] = {
   {MODKEY, XK_Tab, view, {0}},
   {MODKEY, XK_q, killclient, {0}},
   {MODKEY, XK_space, setlayout, {0}},
-  {MODKEY, XK_Left, viewtoleft, {0}},
   {MODKEY, XK_j, focusstack, {.i = +1}},
   {MODKEY, XK_k, focusstack, {.i = -1}},
-  {MODKEY, XK_Right,  viewtoright, {0}},
   {MODKEY, XK_f, togglefullscreen, {0}},
   {MODKEY, XK_d, spawn, {.v = dmenucmd}},
-  {MODKEY, XK_bracketleft, viewtoleft, {0}},
   {MODKEY, XK_Return, spawn, {.v = termcmd}},
-  {MODKEY, XK_bracketright, viewtoright, {0}},
   {MODKEY, XK_m, spawn, SHCMD("pavucontrol")},
   {MODKEY, XK_t, spawn, SHCMD("pcmanfm /home/petrside")},
   {MODKEY, XK_v, spawn, SHCMD("pcmanfm /home/petrside/ece")},
 
   {MODKEY | ShiftMask, XK_q, quit, {0}},
   {MODKEY | ShiftMask, XK_Return, zoom, {0}},
-  {MODKEY | ShiftMask, XK_Left, tagtoleft, {0}},
-  {MODKEY | ShiftMask, XK_Right, tagtoright, {0}},
   {MODKEY | ShiftMask, XK_i, incnmaster, {.i = +1}},
   {MODKEY | ShiftMask, XK_d, incnmaster, {.i = -1}},
   {MODKEY | ShiftMask, XK_h, setmfact, {.f = -0.05}},
   {MODKEY | ShiftMask, XK_l, setmfact, {.f = +0.05}},
   {MODKEY | ShiftMask, XK_space, togglefloating, {0}},
   {MODKEY | ShiftMask, XK_e, spawn, {.v = power_menu}},
-  {MODKEY | ShiftMask, XK_bracketleft, tagtoleft, {0}},
-  {MODKEY | ShiftMask, XK_bracketright, tagtoright, {0}},
   {MODKEY | ShiftMask, XK_t, setlayout, {.v = &layouts[0]}},
   {MODKEY | ShiftMask, XK_f, setlayout, {.v = &layouts[1]}},
   {MODKEY | ShiftMask, XK_w, setlayout, {.v = &layouts[2]}},
