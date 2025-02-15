@@ -26,6 +26,7 @@
 #include <X11/Xutil.h>
 #include <X11/cursorfont.h>
 #include <X11/keysym.h>
+#include <ctype.h> /* for tolower function, very tiny standard library */
 #include <errno.h>
 #include <locale.h>
 #include <signal.h>
@@ -298,6 +299,7 @@ static int xerror(Display *dpy, XErrorEvent *ee);
 static int xerrordummy(Display *dpy, XErrorEvent *ee);
 static int xerrorstart(Display *dpy, XErrorEvent *ee);
 static void zoom(const Arg *arg);
+static void gaplessgrid(Monitor *m);
 static void centeredmaster(Monitor *m);
 static void centeredfloatingmaster(Monitor *m);
 
@@ -338,6 +340,8 @@ static Window root, wmcheckwin;
 
 /* configuration, allows nested code to access above variables */
 #include "config.h"
+
+unsigned int tagw[LENGTH(tags)];
 
 struct Pertag {
   unsigned int curtag, prevtag;          /* current and previous tag */
@@ -487,7 +491,7 @@ void attachstack(Client *c) {
 }
 
 void buttonpress(XEvent *e) {
-  unsigned int i, x, click;
+  unsigned int i, x, click, occ = 0;
   Arg arg = {0};
   Client *c;
   Monitor *m;
@@ -502,9 +506,14 @@ void buttonpress(XEvent *e) {
   }
   if (ev->window == selmon->barwin) {
     i = x = 0;
-    do
-      x += TEXTW(tags[i]);
-    while (ev->x >= x && ++i < LENGTH(tags));
+    for (c = m->clients; c; c = c->next)
+      occ |= c->tags == 255 ? 0 : c->tags;
+    do {
+      /* do not reserve space for vacant tags */
+      if (!(occ & 1 << i || m->tagset[m->seltags] & 1 << i))
+        continue;
+      x += tagw[i];
+    } while (ev->x >= x && ++i < LENGTH(tags));
     if (i < LENGTH(tags)) {
       click = ClkTagBar;
       arg.ui = 1 << i;
@@ -841,6 +850,8 @@ void drawbar(Monitor *m) {
   int boxw = drw->fonts->h / 6 + 2;
   unsigned int i, occ = 0, urg = 0;
   Client *c;
+  char tagdisp[64];
+  char *masterclientontag[LENGTH(tags)];
 
   if (!m->showbar)
     return;
@@ -855,22 +866,40 @@ void drawbar(Monitor *m) {
     drw_text(drw, m->ww - tw - stw, 0, tw, bh, lrpad / 2 - 2, stext, 0);
   }
 
+  for (i = 0; i < LENGTH(tags); i++)
+    masterclientontag[i] = NULL;
+
   resizebarwin(m);
   for (c = m->clients; c; c = c->next) {
     occ |= c->tags;
+    occ |= c->tags == 255 ? 0 : c->tags;
     if (c->isurgent)
       urg |= c->tags;
+    for (i = 0; i < LENGTH(tags); i++)
+      if (!masterclientontag[i] && c->tags & (1 << i)) {
+        XClassHint ch = {NULL, NULL};
+        XGetClassHint(dpy, c->win, &ch);
+        masterclientontag[i] = ch.res_class;
+        if (lcaselbl)
+          masterclientontag[i][0] = tolower(masterclientontag[i][0]);
+      }
   }
   x = 0;
   for (i = 0; i < LENGTH(tags); i++) {
-    w = TEXTW(tags[i]);
+    /* do not draw vacant tags */
+    if (!(occ & 1 << i || m->tagset[m->seltags] & 1 << i))
+      continue;
+
+    if (masterclientontag[i])
+      snprintf(tagdisp, 64, ptagf, tags[i], masterclientontag[i]);
+    else
+      snprintf(tagdisp, 64, etagf, tags[i]);
+    masterclientontag[i] = tagdisp;
+    tagw[i] = w = TEXTW(masterclientontag[i]);
+
     drw_setscheme(
         drw, scheme[m->tagset[m->seltags] & 1 << i ? SchemeSel : SchemeNorm]);
-    drw_text(drw, x, 0, w, bh, lrpad / 2, tags[i], urg & 1 << i);
-    if (occ & 1 << i)
-      drw_rect(drw, x + boxs, boxs, boxw, boxw,
-               m == selmon && selmon->sel && selmon->sel->tags & 1 << i,
-               urg & 1 << i);
+    drw_text(drw, x, 0, w, bh, lrpad / 2, masterclientontag[i], urg & 1 << i);
     x += w;
   }
   w = TEXTW(m->ltsymbol);
@@ -2590,6 +2619,45 @@ void centeredmaster(Monitor *m) {
         oty += HEIGHT(c);
       }
     }
+}
+
+void gaplessgrid(Monitor *m) {
+  unsigned int n, cols, rows, cn, rn, i, cx, cy, cw, ch;
+  Client *c;
+
+  for (n = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next))
+    n++;
+  if (n == 0)
+    return;
+
+  /* grid dimensions */
+  for (cols = 0; cols <= n / 2; cols++)
+    if (cols * cols >= n)
+      break;
+  if (n ==
+      5) /* set layout against the general calculation: not 1:2:2, but 2:3 */
+    cols = 2;
+  rows = n / cols;
+
+  /* window geometries (cell height/width/x/y) */
+  cw = m->ww / (cols ? cols : 1);
+  cn = 0; /* current column number */
+  rn = 0; /* current row number */
+  for (i = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next)) {
+    if (i / rows + 1 > cols - n % cols)
+      rows = n / cols + 1;
+    ch = m->wh / (rows ? rows : 1);
+    cx = m->wx + cn * cw;
+    cy = m->wy + rn * ch;
+    resize(c, cx, cy, cw - 2 * c->bw, ch - 2 * c->bw, False);
+
+    i++;
+    rn++;
+    if (rn >= rows) { /* jump to the next column */
+      rn = 0;
+      cn++;
+    }
+  }
 }
 
 void centeredfloatingmaster(Monitor *m) {
